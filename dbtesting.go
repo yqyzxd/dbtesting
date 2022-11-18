@@ -1,3 +1,41 @@
+/*
+Package dbtesting is used for unit test which gives you a clean db environment
+for mysql usage:
+	func TestMain(m *testing.M) {
+		os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
+			Image:         "mysql:5.6",
+			User:          "root",
+			Password:      "123456",
+			DBName:        "mu_test_db",
+			DB:            dbtesting.Mysql,
+			ContainerPort: "3306/tcp",
+		}))
+	}
+	func NewEngine() (*xorm.Engine, error) {
+		if dbtesting.ConnURI == "" {
+			return nil, fmt.Errorf("conn uri is nil")
+		}
+		return xorm.NewEngine("mysql", dbtesting.ConnURI)
+	}
+
+
+for mongo usage:
+		func TestMain(m *testing.M) {
+				os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
+					Image:         "mongo",
+					User:          "admin",
+					Password:      "123456",
+					DB:            dbtesting.Mongo,
+					ContainerPort: "27017/tcp",
+				}))
+			}
+		func NewClient(c context.Context) (*mongo.Client, error) {
+			if dbtesting.ConnURI == "" {
+				return nil, fmt.Errorf("conn uri is nil")
+			}
+			return mongo.Connect(c, options.Client().ApplyURI(dbtesting.ConnURI))
+		}
+*/
 package dbtesting
 
 import (
@@ -7,6 +45,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/yqyzxd/dbtesting/waiter"
+	"strings"
 	"testing"
 )
 
@@ -39,12 +79,20 @@ func RunDBInDocker(m *testing.M, config *Config) int {
 		panic(err)
 	}
 	context := context.Background()
-
+	envMap := map[string]string{
+		"MYSQL_ROOT_PASSWORD": config.Password,
+		"MYSQL_DATABASE":      config.DBName,
+	}
+	var env []string
+	for envKey, envVar := range envMap {
+		env = append(env, envKey+"="+envVar)
+	}
 	containerBody, err := cli.ContainerCreate(context, &container.Config{
 		Image: config.Image,
 		ExposedPorts: nat.PortSet{
 			nat.Port(config.ContainerPort): {},
 		},
+		Env: env,
 	}, &container.HostConfig{
 		PortBindings: nat.PortMap{ //将容器端口 映射到以下的系统端口
 			nat.Port(config.ContainerPort): []nat.PortBinding{
@@ -85,6 +133,8 @@ func RunDBInDocker(m *testing.M, config *Config) int {
 	case Mongo:
 		ConnURI = fmt.Sprintf(mongoConnStr, config.User, config.Password, hostPortBinding.HostIP, hostPortBinding.HostPort)
 	}
+	port := strings.ReplaceAll(config.ContainerPort, "/tcp", "")
+	waiter.ForLog(port, cli, containerBody.ID).Wait(context)
 
 	fmt.Printf("listening at %+v\n", hostPortBinding)
 
