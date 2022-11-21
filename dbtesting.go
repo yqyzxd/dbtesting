@@ -2,12 +2,12 @@
 Package dbtesting is used for unit test which gives you a clean db environment
 for mysql usage:
 	func TestMain(m *testing.M) {
-		os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
+		os.Exit(dbtesting.RunDBInDocker(m, &config.Config{
 			Image:         "mysql:5.6",
 			User:          "root",
 			Password:      "123456",
 			DBName:        "mu_test_db",
-			DB:            dbtesting.Mysql,
+			DB:            config.Mysql,
 			ContainerPort: "3306/tcp",
 		}))
 	}
@@ -21,11 +21,11 @@ for mysql usage:
 
 for mongo usage:
 		func TestMain(m *testing.M) {
-				os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
+				os.Exit(dbtesting.RunDBInDocker(m, &config.Config{
 					Image:         "mongo",
 					User:          "admin",
 					Password:      "123456",
-					DB:            dbtesting.Mongo,
+					DB:            config.Mongo,
 					ContainerPort: "27017/tcp",
 				}))
 			}
@@ -61,7 +61,7 @@ func RunDBInDocker(m *testing.M, config *config.Config) int {
 	if err != nil {
 		panic(err)
 	}
-	context := context.Background()
+	ctx := context.Background()
 
 	builder := env.NewBuilder(config)
 	env, err := builder.BuildEnv()
@@ -69,7 +69,7 @@ func RunDBInDocker(m *testing.M, config *config.Config) int {
 		panic(err)
 	}
 
-	containerBody, err := cli.ContainerCreate(context, &container.Config{
+	containerBody, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: config.Image,
 		ExposedPorts: nat.PortSet{
 			nat.Port(config.ContainerPort): {},
@@ -90,12 +90,12 @@ func RunDBInDocker(m *testing.M, config *config.Config) int {
 		panic(err)
 	}
 
-	err = cli.ContainerStart(context, containerBody.ID, types.ContainerStartOptions{})
+	err = cli.ContainerStart(ctx, containerBody.ID, types.ContainerStartOptions{})
 	if err != nil {
 		panic(err)
 	}
 	defer func() {
-		cli.ContainerRemove(context, containerBody.ID, types.ContainerRemoveOptions{
+		cli.ContainerRemove(ctx, containerBody.ID, types.ContainerRemoveOptions{
 			Force: true,
 		})
 		if err != nil {
@@ -104,7 +104,7 @@ func RunDBInDocker(m *testing.M, config *config.Config) int {
 		fmt.Println("container removed")
 	}()
 
-	inspectJson, err := cli.ContainerInspect(context, containerBody.ID)
+	inspectJson, err := cli.ContainerInspect(ctx, containerBody.ID)
 	if err != nil {
 		panic(err)
 	}
@@ -115,7 +115,7 @@ func RunDBInDocker(m *testing.M, config *config.Config) int {
 		panic(err)
 	}
 	port := strings.ReplaceAll(config.ContainerPort, "/tcp", "")
-	waiter.ForLog(port, cli, containerBody.ID).Wait(context)
+	waiter.ForLog(port, cli, containerBody.ID).Wait(ctx)
 
 	fmt.Printf("listening at %+v\n", hostPortBinding)
 
