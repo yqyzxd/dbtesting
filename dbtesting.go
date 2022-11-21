@@ -45,6 +45,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/yqyzxd/dbtesting/env"
 	"github.com/yqyzxd/dbtesting/waiter"
 	"strings"
 	"testing"
@@ -66,10 +67,11 @@ const (
 	Mysql DB = iota
 	Mongo
 )
-const (
-	mysqlConnStr string = "%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local"
-	mongoConnStr string = "mongodb://%s:%s@%s:%s/?authSource=admin&readPreference=primary&ssl=false"
-)
+
+type Builder interface {
+	BuildEnv() ([]string, error)
+	BuildURI(hostIP, hostPort string) (string, error)
+}
 
 // RunDBInDocker Docker中运行测试数据库
 func RunDBInDocker(m *testing.M, config *Config) int {
@@ -79,14 +81,13 @@ func RunDBInDocker(m *testing.M, config *Config) int {
 		panic(err)
 	}
 	context := context.Background()
-	envMap := map[string]string{
-		"MYSQL_ROOT_PASSWORD": config.Password,
-		"MYSQL_DATABASE":      config.DBName,
+
+	builder := env.NewBuilder(config)
+	env, err := builder.BuildEnv()
+	if err != nil {
+		panic(err)
 	}
-	var env []string
-	for envKey, envVar := range envMap {
-		env = append(env, envKey+"="+envVar)
-	}
+
 	containerBody, err := cli.ContainerCreate(context, &container.Config{
 		Image: config.Image,
 		ExposedPorts: nat.PortSet{
@@ -127,11 +128,10 @@ func RunDBInDocker(m *testing.M, config *Config) int {
 		panic(err)
 	}
 	hostPortBinding := inspectJson.NetworkSettings.Ports[nat.Port(config.ContainerPort)][0]
-	switch config.DB {
-	case Mysql:
-		ConnURI = fmt.Sprintf(mysqlConnStr, config.User, config.Password, hostPortBinding.HostIP, hostPortBinding.HostPort, config.DBName)
-	case Mongo:
-		ConnURI = fmt.Sprintf(mongoConnStr, config.User, config.Password, hostPortBinding.HostIP, hostPortBinding.HostPort)
+
+	ConnURI, err = builder.BuildURI(hostPortBinding.HostIP, hostPortBinding.HostPort)
+	if err != nil {
+		panic(err)
 	}
 	port := strings.ReplaceAll(config.ContainerPort, "/tcp", "")
 	waiter.ForLog(port, cli, containerBody.ID).Wait(context)
