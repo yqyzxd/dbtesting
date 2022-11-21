@@ -45,6 +45,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/yqyzxd/dbtesting/config"
 	"github.com/yqyzxd/dbtesting/env"
 	"github.com/yqyzxd/dbtesting/waiter"
 	"strings"
@@ -53,28 +54,8 @@ import (
 
 var ConnURI string
 
-type Config struct {
-	Image         string
-	DBName        string
-	User          string
-	Password      string
-	ContainerPort string
-	DB            DB
-}
-type DB int
-
-const (
-	Mysql DB = iota
-	Mongo
-)
-
-type Builder interface {
-	BuildEnv() ([]string, error)
-	BuildURI(hostIP, hostPort string) (string, error)
-}
-
 // RunDBInDocker Docker中运行测试数据库
-func RunDBInDocker(m *testing.M, config *Config) int {
+func RunDBInDocker(m *testing.M, config *config.Config) int {
 
 	cli, err := client.NewClientWithOpts()
 	if err != nil {

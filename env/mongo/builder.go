@@ -2,7 +2,7 @@ package mongo
 
 import (
 	"fmt"
-	"github.com/yqyzxd/dbtesting"
+	"github.com/yqyzxd/dbtesting/config"
 )
 
 const (
@@ -10,10 +10,10 @@ const (
 )
 
 type builder struct {
-	config *dbtesting.Config
+	config *config.Config
 }
 
-func NewBuilder(config *dbtesting.Config) *builder {
+func NewBuilder(config *config.Config) *builder {
 	return &builder{
 		config: config,
 	}
