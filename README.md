@@ -6,12 +6,12 @@ go get github.com/yqyzxd/dbtesting
 ### for mysql usage
 ```go
 	func TestMain(m *testing.M) {
-		os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
-			Image:         "mysql:5.6",
+		os.Exit(dbtesting.RunDBInDocker(m, &config.Config{
+			Image:         "mysql",
 			User:          "root",
 			Password:      "123456",
 			DBName:        "mu_test_db",
-			DB:            dbtesting.Mysql,
+			DB:            config.Mysql,
 			ContainerPort: "3306/tcp",
 		}))
 	}
@@ -26,11 +26,11 @@ go get github.com/yqyzxd/dbtesting
 for mongo usage:
 ```go
 	func TestMain(m *testing.M) {
-		os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
+		os.Exit(dbtesting.RunDBInDocker(m, &config.Config{
 				Image:         "mongo",
 				User:          "admin",
 				Password:      "123456",
-				DB:            dbtesting.Mongo,
+				DB:            config.Mongo,
 				ContainerPort: "27017/tcp",
 			}))
 	}
