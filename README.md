@@ -5,8 +5,8 @@ go get github.com/yqyzxd/dbtesting
 
 ### for mysql usage
 ```go
-func TestMain(m *testing.M) {
-	os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
+	func TestMain(m *testing.M) {
+		os.Exit(dbtesting.RunDBInDocker(m, &dbtesting.Config{
 			Image:         "mysql:5.6",
 			User:          "root",
 			Password:      "123456",
